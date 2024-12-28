@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="./logo.png" type="image/x-icon" />
+    <title>Trò Chơi Đập Bóng</title>
+    <audio id="background-music" autoplay loop>
+      <source src="./nhacdapbong.mp3" />
+      Trình duyệt của bạn không hỗ trợ âm thanh.
+    </audio>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #87ceeb; /* Nền trời xanh */
+        font-family: Arial, sans-serif;
+      }
+
+      #balloons-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #game-over,
+      #scoreboard,
+      #instructions {
+        position: fixed;
+        text-align: center;
+        width: 100%;
+        z-index: 10;
+      }
+
+      #instructions {
+        top: 10px;
+        font-size: 20px;
+        color: brown;
+        text-shadow: 1px 1px 2px black;
+      }
+
+      #scoreboard {
+        top: 50px;
+        font-size: 24px;
+        color: white;
+        text-shadow: 1px 1px 2px black;
+      }
+
+      #game-over {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 36px;
+        color: red;
+        display: none;
+        text-shadow: 1px 1px 2px black;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="balloons-canvas"></canvas>
+    <div
+      id="start-screen"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      "
+    >
+      <h1>Trò Chơi Đập Bóng</h1>
+      <button
+        id="start-button"
+        style="
+          padding: 15px 30px;
+          font-size: 20px;
+          background-color: #28a745;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        "
+      >
+        Bắt đầu
+      </button>
+    </div>
+    <div id="instructions">
+      Nhấp vào các quả bóng để đập chúng trước khi chúng thoát khỏi màn hình!
+    </div>
+    <div id="scoreboard">Điểm: 0</div>
+    <div id="game-over">ahihi thua ròi. NGU!</div>
+    <div
+      id="game-over-screen"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        color: white;
+        display: none;
+      "
+    >
+      <h1>Ahihi thua rồi.NGU!</h1>
+      <img
+        src="./anhma.jpg"
+        alt="Thua rồi"
+        style="
+          max-width: 80%;
+          max-height: 50%;
+          border-radius: 10px;
+          margin: 20px 0;
+        "
+      />
+      <button
+        id="restart-button"
+        style="
+          padding: 15px 30px;
+          font-size: 20px;
+          background-color: #dc3545;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        "
+      >
+        Chơi lại
+      </button>
+    </div>
+
+    <script>
+      // Lấy phần tử nút và màn hình bắt đầu
+      const startScreen = document.getElementById("start-screen");
+      const startButton = document.getElementById("start-button");
+
+      // Sự kiện khi nhấn nút Bắt đầu
+      startButton.addEventListener("click", () => {
+        startScreen.style.display = "none"; // Ẩn màn hình bắt đầu
+        // Bắt đầu trò chơi (nếu cần chạy bất kỳ hàm khởi động nào)
+        initGame();
+      });
+
+      // Hàm khởi động trò chơi
+      function initGame() {
+        // Tại đây bạn có thể khởi động mọi thứ cần thiết cho trò chơi
+        console.log("Trò chơi bắt đầu!");
+        // Ví dụ: Kích hoạt phát nhạc
+        const music = document.getElementById("background-music");
+        if (music) {
+          music
+            .play()
+            .catch(() =>
+              console.log("Nhạc bị chặn, cần tương tác người dùng.")
+            );
+        }
+      }
+      // Thiết lập canvas và bối cảnh
+      const canvas = document.getElementById("balloons-canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      // Biến trò chơi
+      const balloons = [];
+      let gameOver = false; // Biến kiểm tra xem trò chơi có kết thúc không
+      let score = 0; // Điểm số của người chơi
+
+      // Tạo ra các quả bóng bay ngẫu nhiên
+      function createBalloon() {
+        const radius = Math.random() * 20 + 20; // Bán kính của bóng
+        const x = Math.random() * canvas.width; // Vị trí ngẫu nhiên trên màn hình
+        const y = canvas.height + radius; // Bắt đầu từ dưới cùng của màn hình
+        const color = `hsl(${Math.random() * 360}, 100%, 60%)`; // Màu sắc ngẫu nhiên
+        const speed = Math.random() * 2 + 1; // Tốc độ bay lên
+
+        balloons.push({ x, y, radius, color, speed });
+      }
+
+      // Vẽ các quả bóng bay
+      function drawBalloons() {
+        if (gameOver) return; // Nếu trò chơi kết thúc thì không vẽ nữa
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height); // Xóa bối cảnh canvas
+
+        // Duyệt qua tất cả các quả bóng và vẽ chúng
+        balloons.forEach((balloon) => {
+          ctx.beginPath();
+          ctx.arc(balloon.x, balloon.y, balloon.radius, 0, Math.PI * 2);
+          ctx.fillStyle = balloon.color;
+          ctx.fill();
+          ctx.stroke();
+
+          // Di chuyển quả bóng bay lên trên
+          balloon.y -= balloon.speed;
+
+          // Nếu bóng bay vượt qua màn hình trên, thông báo thua
+          if (balloon.y < -balloon.radius && !gameOver) {
+            endGame();
+          }
+        });
+      }
+
+      // Tạo bóng bay mới mỗi 2 giây
+      setInterval(createBalloon, 2000);
+
+      // Cập nhật và vẽ lại các quả bóng bay mỗi frame
+      function animate() {
+        drawBalloons();
+        requestAnimationFrame(animate);
+      }
+
+      animate(); // Bắt đầu vòng lặp animation
+
+      // Cập nhật điểm số
+      function updateScore() {
+        const scoreboard = document.getElementById("scoreboard");
+        scoreboard.textContent = `Điểm: ${score}`;
+      }
+
+      // Kiểm tra sự kiện nhấp chuột và nổ quả bóng
+      canvas.addEventListener("click", function (event) {
+        if (gameOver) return; // Nếu trò chơi kết thúc thì không cho nhấp nữa
+
+        const mouseX = event.clientX;
+        const mouseY = event.clientY;
+
+        for (let i = balloons.length - 1; i >= 0; i--) {
+          const balloon = balloons[i];
+          const dx = mouseX - balloon.x;
+          const dy = mouseY - balloon.y;
+
+          // Kiểm tra nếu người dùng nhấp vào quả bóng
+          if (Math.sqrt(dx * dx + dy * dy) < balloon.radius) {
+            // Tăng điểm số
+            score += 1;
+            updateScore();
+
+            // Tạo hiệu ứng nổ (biến mất quả bóng)
+            balloons.splice(i, 1); // Xóa quả bóng khỏi danh sách
+
+            // Tạo một quả bóng mới thay thế
+            createBalloon();
+            break;
+          }
+        }
+      });
+
+      function endGame() {
+        gameOver = true;
+        document.getElementById("game-over").style.display = "block";
+      }
+      window.addEventListener("load", () => {
+        const music = document.getElementById("background-music");
+        music.play().catch(() => {
+          console.log(
+            "Trình duyệt chặn tự động phát nhạc. Người dùng cần tương tác trước."
+          );
+        });
+      });
+      // Lấy phần tử màn hình thua và nút chơi lại
+      const gameOverScreen = document.getElementById("game-over-screen");
+      const restartButton = document.getElementById("restart-button");
+
+      // Hàm kết thúc trò chơi (gọi khi người chơi thua)
+      function endGame() {
+        gameOver = true;
+        gameOverScreen.style.display = "flex"; // Hiển thị màn hình thua
+      }
+
+      // Sự kiện khi nhấn nút Chơi lại
+      restartButton.addEventListener("click", () => {
+        gameOverScreen.style.display = "none"; // Ẩn màn hình thua
+        restartGame(); // Gọi hàm chơi lại
+      });
+
+      // Hàm chơi lại (tùy chỉnh lại trò chơi)
+      function restartGame() {
+        gameOver = false;
+        score = 0;
+        balloons.length = 0; // Xóa tất cả bóng bay
+        updateScore(); // Cập nhật điểm về 0
+        createBalloon(); // Tạo bóng đầu tiên
+      }
+    </script>
+  </body>
+</html>
